@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tarjeta de Lealtad | Nail Studio</title>
+  <style>
+    :root {
+      --primary: #e88ca7;
+      --primary-dark: #d46b89;
+      --accent: #f7d6e0;
+      --bg: #faf4f6;
+      --card-bg: #ffffff;
+      --text: #4a4a4a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 380px;
+      background: var(--card-bg);
+      border-radius: 24px;
+      box-shadow: 0 10px 25px rgba(232, 140, 167, 0.15);
+      padding: 24px;
+      text-align: center;
+      border: 1px solid var(--accent);
+    }
+
+    .brand-header {
+      margin-bottom: 12px;
+    }
+
+    .brand-header h1 {
+      font-size: 1.5rem;
+      color: var(--primary-dark);
+      letter-spacing: 1px;
+    }
+
+    .client-name-box {
+      margin-bottom: 18px;
+    }
+
+    .client-name-box h2 {
+      font-size: 1.2rem;
+      color: #333;
+      font-weight: 600;
+    }
+
+    .client-name-box p {
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .card-reward {
+      background: var(--accent);
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--primary-dark);
+      margin-bottom: 24px;
+    }
+
+    .stamps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stamp {
+      aspect-ratio: 1;
+      border: 2px dashed var(--primary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: var(--primary);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .stamp.active {
+      background-color: var(--primary);
+      border-style: solid;
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .stamp.active::after {
+      content: '💅';
+      font-size: 1.4rem;
+    }
+
+    .stamp.active span {
+      display: none;
+    }
+
+    .notification {
+      display: none;
+      padding: 10px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .notification.success {
+      display: block;
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .error-card {
+      color: #721c24;
+      background-color: #f8d7da;
+      border-color: #f5c6cb;
+      padding: 15px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+    }
+  </style>
+
+  <!-- Cargamos la hoja separada con los clientes -->
+  <script src="clients.js"></script>
+</head>
+<body>
+
+  <div class="container" id="main-card">
+    <div class="brand-header">
+      <h1>NAIL STUDIO</h1>
+    </div>
+
+    <div class="client-name-box">
+      <h2 id="client-name">Cargando cliente...</h2>
+      <p>Tarjeta del Cliente Frecuente</p>
+    </div>
+
+    <div id="alert-box" class="notification"></div>
+
+    <div class="card-reward" id="reward-status">
+      ¡Llena tu tarjeta y obtén un 50% de descuento!
+    </div>
+
+    <div class="stamps-grid" id="stamps-container"></div>
+  </div>
+
+  <script>
+    const TOTAL_STAMPS = 6;
+    const SECRET_KEY = "NAILS2026"; // Clave secreta para sumar sellos mediante QR
+
+    // 1. OBTENER ID DEL CLIENTE DESDE LA URL (ejemplo: ?id=c1)
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('id');
+
+    // Validar si el cliente existe en clients.js
+    if (!clientId || !CLIENTS_DB[clientId]) {
+      document.getElementById('main-card').innerHTML = `
+        <div class="error-card">
+          <strong>Tarjeta no encontrada</strong><br>
+          Por favor solicita a Nail Studio tu enlace personal de cliente.
+        </div>
+      `;
+    } else {
+      const client = CLIENTS_DB[clientId];
+      document.getElementById('client-name').textContent = client.name;
+
+      // Cargar sellos (prioriza localStorage si existe, o el valor de clients.js)
+      let currentStamps = parseInt(localStorage.getItem(`stamps_${clientId}`)) ?? client.stamps;
+
+      // 2. VERIFICAR SI VIENE DE ESCANEAR UN QR PARA AGREGAR SELLO
+      const scannedSecret = urlParams.get('secret');
+      if (scannedSecret === SECRET_KEY) {
+        if (currentStamps < TOTAL_STAMPS) {
+          currentStamps++;
+          localStorage.setItem(`stamps_${clientId}`, currentStamps);
+          showAlert('✨ ¡Sello añadido con éxito!');
+        } else {
+          showAlert('¡Ya completaste todos tus sellos!');
+        }
+        
+        // Limpiar parámetro 'secret' para no duplicar al recargar
+        urlParams.delete('secret');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, document.title, newUrl);
+      }
+
+      renderStamps(currentStamps);
+    }
+
+    function showAlert(message) {
+      const alertBox = document.getElementById('alert-box');
+      alertBox.textContent = message;
+      alertBox.classList.add('success');
+      setTimeout(() => {
+        alertBox.classList.remove('success');
+      }, 4000);
+    }
+
+    function renderStamps(stampsCount) {
+      const container = document.getElementById('stamps-container');
+      const rewardStatus = document.getElementById('reward-status');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= TOTAL_STAMPS; i++) {
+        const stamp = document.createElement('div');
+        stamp.classList.add('stamp');
+        if (i <= stampsCount) {
+          stamp.classList.add('active');
+        } else {
+          stamp.innerHTML = `<span>${i}</span>`;
+        }
+        container.appendChild(stamp);
+      }
+
+      if (stampsCount >= TOTAL_STAMPS) {
+        rewardStatus.textContent = '🎉 ¡Felicidades! Tienes tu premio listo.';
+        rewardStatus.style.background = '#d4edda';
+        rewardStatus.style.color = '#155724';
+      } else {
+        rewardStatus.textContent = `Te faltan ${TOTAL_STAMPS - stampsCount} visita(s) para tu premio.`;
+        rewardStatus.style.background = 'var(--accent)';
+        rewardStatus.style.color = 'var(--primary-dark)';
+      }
+    }
+  </script>
+</body>
+</html>
