@@ -201,9 +201,9 @@
 
   <script>
     const TOTAL_STAMPS = 6;
-    const SECRET_KEY = "NAILS2026"; // Clave del QR para sumar sellos
+    const SECRET_KEY = "NAILS2026";
     
-    // URL DE GOOGLE APPS SCRIPT CONFIGURADA CORRECTAMENTE
+    // URL DE GOOGLE APPS SCRIPT
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDsEYfdACplIwmeLF6WR3tVyMHp5N02CRsoCibxpXZiqHfxcPyaSIPKnakADIij_u2/exec";
 
     let clientName = localStorage.getItem('cangrejito_client_name');
@@ -234,7 +234,6 @@
       localStorage.setItem('cangrejito_stamps', 0);
       currentStamps = 0;
       
-      // Notificar a Google Sheets
       sendToGoogleSheets('Nuevo Registro', 0);
       
       initApp();
@@ -250,7 +249,6 @@
           localStorage.setItem('cangrejito_stamps', currentStamps);
           showAlert('✨ ¡Sello añadido con éxito!');
           
-          // Notificar a Google Sheets
           sendToGoogleSheets('Sello Añadido', currentStamps);
         } else {
           showAlert('¡Ya completaste todos tus sellos!');
