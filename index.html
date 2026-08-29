@@ -151,14 +151,25 @@
       font-size: 0.95rem;
     }
 
-    .btn-edit {
+    .actions-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 1px dashed #eee;
+    }
+
+    .btn-link {
       background: transparent;
       border: none;
       color: #aaa;
       font-size: 0.75rem;
       cursor: pointer;
       text-decoration: underline;
-      margin-top: 10px;
+    }
+
+    .btn-link.danger {
+      color: #e74c3c;
     }
   </style>
 </head>
@@ -195,7 +206,11 @@
 
       <div class="stamps-grid" id="stamps-container"></div>
 
-      <button class="btn-edit" onclick="editName()">¿Cambiar o editar nombre?</button>
+      <!-- BOTONES DE EDICIÓN Y REINICIO -->
+      <div class="actions-footer">
+        <button class="btn-link" onclick="editName()">Editar nombre</button>
+        <button class="btn-link danger" onclick="resetCard()">Reiniciar tarjeta</button>
+      </div>
     </div>
   </div>
 
@@ -203,7 +218,7 @@
     const TOTAL_STAMPS = 6;
     const SECRET_KEY = "NAILS2026";
     
-    // URL DE GOOGLE APPS SCRIPT ACTUALIZADA
+    // URL DE GOOGLE APPS SCRIPT
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwivCiZnPLXRTfmc1jWba_zyjR3hhCDSnxgghj8a27gpheh6bSJYBVVAyTaDhHsRCgl/exec";
 
     let clientName = localStorage.getItem('cangrejito_client_name');
@@ -318,6 +333,18 @@
         localStorage.setItem('cangrejito_client_name', clientName);
         document.getElementById('client-name').textContent = clientName;
         sendToGoogleSheets('Nombre Actualizado', currentStamps);
+      }
+    }
+
+    function resetCard() {
+      const confirmReset = confirm("¿Estás segura/o de que deseas reiniciar tu tarjeta? Se borrarán tus sellos actuales.");
+      if (confirmReset) {
+        sendToGoogleSheets('Tarjeta Reiniciada', 0);
+        localStorage.removeItem('cangrejito_client_name');
+        localStorage.removeItem('cangrejito_stamps');
+        clientName = null;
+        currentStamps = 0;
+        initApp();
       }
     }
 
