@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tarjeta de Lealtad | Nail Studio</title>
+  <title>Cangrejito Rewards | Tarjeta de Lealtad</title>
   <style>
     :root {
       --primary: #e88ca7;
@@ -42,10 +42,6 @@
       border: 1px solid var(--accent);
     }
 
-    .brand-header {
-      margin-bottom: 12px;
-    }
-
     .brand-header h1 {
       font-size: 1.5rem;
       color: var(--primary-dark);
@@ -53,7 +49,7 @@
     }
 
     .client-name-box {
-      margin-bottom: 18px;
+      margin: 10px 0 18px 0;
     }
 
     .client-name-box h2 {
@@ -128,81 +124,157 @@
       color: #155724;
     }
 
-    .error-card {
-      color: #721c24;
-      background-color: #f8d7da;
-      border-color: #f5c6cb;
-      padding: 15px;
-      border-radius: 12px;
-      font-size: 0.9rem;
+    .register-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 15px;
+    }
+
+    .register-box input {
+      padding: 12px;
+      border: 1px solid var(--primary);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      text-align: center;
+      outline: none;
+    }
+
+    .btn {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .btn-edit {
+      background: transparent;
+      border: none;
+      color: #aaa;
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-decoration: underline;
+      margin-top: 10px;
     }
   </style>
-
-  <!-- Cargamos la hoja separada con los clientes -->
-  <script src="clients.js"></script>
 </head>
 <body>
 
-  <div class="container" id="main-card">
+  <div class="container">
     <div class="brand-header">
-      <h1>NAIL STUDIO</h1>
+      <h1>CANGREJITO REWARDS</h1>
     </div>
 
-    <div class="client-name-box">
-      <h2 id="client-name">Cargando cliente...</h2>
-      <p>Tarjeta del Cliente Frecuente</p>
+    <!-- PANTALLA DE REGISTRO -->
+    <div id="registration-screen" style="display: none;">
+      <div class="client-name-box">
+        <p>¡Bienvenida/o! Ingresa tu nombre para activar tu tarjeta de cliente frecuente.</p>
+      </div>
+      <div class="register-box">
+        <input type="text" id="input-name" placeholder="Tu Nombre y Apellido" maxlength="30">
+        <button class="btn" onclick="registerUser()">Guardar mi Tarjeta</button>
+      </div>
     </div>
 
-    <div id="alert-box" class="notification"></div>
+    <!-- PANTALLA DE TARJETA PRINCIPAL -->
+    <div id="card-screen" style="display: none;">
+      <div class="client-name-box">
+        <h2 id="client-name">Hola</h2>
+        <p>Tarjeta del Cliente Frecuente</p>
+      </div>
 
-    <div class="card-reward" id="reward-status">
-      ¡Llena tu tarjeta y obtén un 50% de descuento!
+      <div id="alert-box" class="notification"></div>
+
+      <div class="card-reward" id="reward-status">
+        ¡Llena tu tarjeta y obtén tu premio!
+      </div>
+
+      <div class="stamps-grid" id="stamps-container"></div>
+
+      <button class="btn-edit" onclick="editName()">¿Cambiar o editar nombre?</button>
     </div>
-
-    <div class="stamps-grid" id="stamps-container"></div>
   </div>
 
   <script>
     const TOTAL_STAMPS = 6;
-    const SECRET_KEY = "NAILS2026"; // Clave secreta para sumar sellos mediante QR
+    const SECRET_KEY = "NAILS2026"; // Clave del QR para sumar sellos
+    
+    // URL DE GOOGLE APPS SCRIPT CONFIGURADA CORRECTAMENTE
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwoF5Grq_RH1nv3TO5sHg3gr6l65x60E9xuUlRz_Skfu3ekcuX5iwe1sWdpoPe2KlVS/exec";
 
-    // 1. OBTENER ID DEL CLIENTE DESDE LA URL (ejemplo: ?id=c1)
-    const urlParams = new URLSearchParams(window.location.search);
-    const clientId = urlParams.get('id');
+    let clientName = localStorage.getItem('cangrejito_client_name');
+    let currentStamps = parseInt(localStorage.getItem('cangrejito_stamps')) || 0;
 
-    // Validar si el cliente existe en clients.js
-    if (!clientId || !CLIENTS_DB[clientId]) {
-      document.getElementById('main-card').innerHTML = `
-        <div class="error-card">
-          <strong>Tarjeta no encontrada</strong><br>
-          Por favor solicita a Nail Studio tu enlace personal de cliente.
-        </div>
-      `;
-    } else {
-      const client = CLIENTS_DB[clientId];
-      document.getElementById('client-name').textContent = client.name;
+    function initApp() {
+      if (!clientName) {
+        document.getElementById('registration-screen').style.display = 'block';
+        document.getElementById('card-screen').style.display = 'none';
+      } else {
+        document.getElementById('registration-screen').style.display = 'none';
+        document.getElementById('card-screen').style.display = 'block';
+        document.getElementById('client-name').textContent = clientName;
 
-      // Cargar sellos (prioriza localStorage si existe, o el valor de clients.js)
-      let currentStamps = parseInt(localStorage.getItem(`stamps_${clientId}`)) ?? client.stamps;
+        checkQRValidation();
+        renderStamps();
+      }
+    }
 
-      // 2. VERIFICAR SI VIENE DE ESCANEAR UN QR PARA AGREGAR SELLO
+    function registerUser() {
+      const nameInput = document.getElementById('input-name').value.trim();
+      if (nameInput === '') {
+        alert('Por favor ingresa tu nombre');
+        return;
+      }
+      clientName = nameInput;
+      localStorage.setItem('cangrejito_client_name', clientName);
+      localStorage.setItem('cangrejito_stamps', 0);
+      currentStamps = 0;
+      
+      // Notificar a Google Sheets
+      sendToGoogleSheets('Nuevo Registro', 0);
+      
+      initApp();
+    }
+
+    function checkQRValidation() {
+      const urlParams = new URLSearchParams(window.location.search);
       const scannedSecret = urlParams.get('secret');
+
       if (scannedSecret === SECRET_KEY) {
         if (currentStamps < TOTAL_STAMPS) {
           currentStamps++;
-          localStorage.setItem(`stamps_${clientId}`, currentStamps);
+          localStorage.setItem('cangrejito_stamps', currentStamps);
           showAlert('✨ ¡Sello añadido con éxito!');
+          
+          // Notificar a Google Sheets
+          sendToGoogleSheets('Sello Añadido', currentStamps);
         } else {
           showAlert('¡Ya completaste todos tus sellos!');
         }
-        
-        // Limpiar parámetro 'secret' para no duplicar al recargar
-        urlParams.delete('secret');
-        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-        window.history.replaceState({}, document.title, newUrl);
-      }
 
-      renderStamps(currentStamps);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+
+    function sendToGoogleSheets(actionType, stampsCount) {
+      if (!GOOGLE_SCRIPT_URL) return;
+
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          clientName: clientName,
+          action: actionType,
+          stamps: stampsCount
+        })
+      }).catch(err => console.log('Error enviando datos:', err));
     }
 
     function showAlert(message) {
@@ -214,7 +286,7 @@
       }, 4000);
     }
 
-    function renderStamps(stampsCount) {
+    function renderStamps() {
       const container = document.getElementById('stamps-container');
       const rewardStatus = document.getElementById('reward-status');
       container.innerHTML = '';
@@ -222,7 +294,7 @@
       for (let i = 1; i <= TOTAL_STAMPS; i++) {
         const stamp = document.createElement('div');
         stamp.classList.add('stamp');
-        if (i <= stampsCount) {
+        if (i <= currentStamps) {
           stamp.classList.add('active');
         } else {
           stamp.innerHTML = `<span>${i}</span>`;
@@ -230,16 +302,28 @@
         container.appendChild(stamp);
       }
 
-      if (stampsCount >= TOTAL_STAMPS) {
+      if (currentStamps >= TOTAL_STAMPS) {
         rewardStatus.textContent = '🎉 ¡Felicidades! Tienes tu premio listo.';
         rewardStatus.style.background = '#d4edda';
         rewardStatus.style.color = '#155724';
       } else {
-        rewardStatus.textContent = `Te faltan ${TOTAL_STAMPS - stampsCount} visita(s) para tu premio.`;
+        rewardStatus.textContent = `Te faltan ${TOTAL_STAMPS - currentStamps} visita(s) para tu premio.`;
         rewardStatus.style.background = 'var(--accent)';
         rewardStatus.style.color = 'var(--primary-dark)';
       }
     }
+
+    function editName() {
+      const newName = prompt('Ingresa tu nombre actualizado:', clientName);
+      if (newName && newName.trim() !== '') {
+        clientName = newName.trim();
+        localStorage.setItem('cangrejito_client_name', clientName);
+        document.getElementById('client-name').textContent = clientName;
+        sendToGoogleSheets('Nombre Actualizado', currentStamps);
+      }
+    }
+
+    initApp();
   </script>
 </body>
 </html>
