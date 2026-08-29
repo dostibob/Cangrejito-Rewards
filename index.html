@@ -124,6 +124,12 @@
       color: #155724;
     }
 
+    .notification.error {
+      display: block;
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
     .register-box {
       display: flex;
       flex-direction: column;
@@ -195,7 +201,7 @@
     <div id="card-screen" style="display: none;">
       <div class="client-name-box">
         <h2 id="client-name">Hola</h2>
-        <p>Tarjeta del Cliente Frecuente</p>
+        <p id="client-cycle-text">Tarjeta del Cliente Frecuente</p>
       </div>
 
       <div id="alert-box" class="notification"></div>
@@ -217,12 +223,15 @@
   <script>
     const TOTAL_STAMPS = 6;
     const SECRET_KEY = "NAILS2026";
+    const MIN_STAMP_INTERVAL_MS = 2 * 60 * 60 * 1000; // Tiempo de bloqueo: 2 horas entre sellos
     
     // URL DE GOOGLE APPS SCRIPT
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwivCiZnPLXRTfmc1jWba_zyjR3hhCDSnxgghj8a27gpheh6bSJYBVVAyTaDhHsRCgl/exec";
 
     let clientName = localStorage.getItem('cangrejito_client_name');
     let currentStamps = parseInt(localStorage.getItem('cangrejito_stamps')) || 0;
+    let cardCycle = parseInt(localStorage.getItem('cangrejito_cycle')) || 1;
+    let lastStampTime = parseInt(localStorage.getItem('cangrejito_last_stamp_time')) || 0;
 
     function initApp() {
       if (!clientName) {
@@ -232,6 +241,12 @@
         document.getElementById('registration-screen').style.display = 'none';
         document.getElementById('card-screen').style.display = 'block';
         document.getElementById('client-name').textContent = clientName;
+        
+        if (cardCycle > 1) {
+          document.getElementById('client-cycle-text').textContent = `Tarjeta Cliente Frecuente (Nivel ${cardCycle})`;
+        } else {
+          document.getElementById('client-cycle-text').textContent = `Tarjeta del Cliente Frecuente`;
+        }
 
         checkQRValidation();
         renderStamps();
@@ -245,12 +260,16 @@
         return;
       }
       clientName = nameInput;
+      currentStamps = 0;
+      cardCycle = 1;
+      lastStampTime = 0;
+
       localStorage.setItem('cangrejito_client_name', clientName);
       localStorage.setItem('cangrejito_stamps', 0);
-      currentStamps = 0;
+      localStorage.setItem('cangrejito_cycle', 1);
+      localStorage.setItem('cangrejito_last_stamp_time', 0);
       
       sendToGoogleSheets('Nuevo Registro', 0);
-      
       initApp();
     }
 
@@ -259,16 +278,25 @@
       const scannedSecret = urlParams.get('secret');
 
       if (scannedSecret === SECRET_KEY) {
-        if (currentStamps < TOTAL_STAMPS) {
+        const now = Date.now();
+        
+        // Verificación de antifraude por tiempo
+        if (now - lastStampTime < MIN_STAMP_INTERVAL_MS) {
+          showAlert('⚠️ Ya se registró un sello recientemente. Intenta más tarde.', 'error');
+        } else if (currentStamps < TOTAL_STAMPS) {
           currentStamps++;
+          lastStampTime = now;
+
           localStorage.setItem('cangrejito_stamps', currentStamps);
-          showAlert('✨ ¡Sello añadido con éxito!');
-          
+          localStorage.setItem('cangrejito_last_stamp_time', lastStampTime);
+
+          showAlert('✨ ¡Sello añadido con éxito!', 'success');
           sendToGoogleSheets('Sello Añadido', currentStamps);
         } else {
-          showAlert('¡Ya completaste todos tus sellos!');
+          showAlert('🎉 ¡Ya completaste tus sellos! Muestra tu tarjeta para recibir tu premio.', 'success');
         }
 
+        // Limpiar la URL para evitar recargas fraudulentas
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
@@ -285,18 +313,19 @@
         body: JSON.stringify({
           clientName: clientName,
           action: actionType,
-          stamps: stampsCount
+          stamps: stampsCount,
+          cycle: cardCycle
         })
       }).catch(err => console.log('Error enviando datos:', err));
     }
 
-    function showAlert(message) {
+    function showAlert(message, type = 'success') {
       const alertBox = document.getElementById('alert-box');
       alertBox.textContent = message;
-      alertBox.classList.add('success');
+      alertBox.className = `notification ${type}`;
       setTimeout(() => {
-        alertBox.classList.remove('success');
-      }, 4000);
+        alertBox.className = 'notification';
+      }, 5000);
     }
 
     function renderStamps() {
@@ -316,7 +345,7 @@
       }
 
       if (currentStamps >= TOTAL_STAMPS) {
-        rewardStatus.textContent = '🎉 ¡Felicidades! Tienes tu premio listo.';
+        rewardStatus.textContent = '🎉 ¡Felicidades! Tienes tu premio listo para canjear.';
         rewardStatus.style.background = '#d4edda';
         rewardStatus.style.color = '#155724';
       } else {
@@ -337,13 +366,28 @@
     }
 
     function resetCard() {
-      const confirmReset = confirm("¿Estás segura/o de que deseas reiniciar tu tarjeta? Se borrarán tus sellos actuales.");
-      if (confirmReset) {
-        sendToGoogleSheets('Tarjeta Reiniciada', 0);
-        localStorage.removeItem('cangrejito_client_name');
-        localStorage.removeItem('cangrejito_stamps');
-        clientName = null;
+      const isCompleted = currentStamps >= TOTAL_STAMPS;
+      let confirmMsg = "¿Estás segura/o de reiniciar la tarjeta?";
+      
+      if (isCompleted) {
+        confirmMsg = "🎉 ¡Premio entregado! ¿Deseas reiniciar la tarjeta para iniciar un nuevo ciclo?";
+      }
+
+      if (confirm(confirmMsg)) {
+        if (isCompleted) {
+          cardCycle++;
+          sendToGoogleSheets('Tarjeta Reiniciada (Premio Entregado)', 0);
+        } else {
+          sendToGoogleSheets('Tarjeta Reiniciada Manualmente', 0);
+        }
+
         currentStamps = 0;
+        lastStampTime = 0;
+
+        localStorage.setItem('cangrejito_stamps', 0);
+        localStorage.setItem('cangrejito_cycle', cardCycle);
+        localStorage.setItem('cangrejito_last_stamp_time', 0);
+
         initApp();
       }
     }
