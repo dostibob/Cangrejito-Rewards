@@ -203,8 +203,8 @@
     const TOTAL_STAMPS = 6;
     const SECRET_KEY = "NAILS2026";
     
-    // URL DE GOOGLE APPS SCRIPT
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDsEYfdACplIwmeLF6WR3tVyMHp5N02CRsoCibxpXZiqHfxcPyaSIPKnakADIij_u2/exec";
+    // URL DE GOOGLE APPS SCRIPT ACTUALIZADA
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwivCiZnPLXRTfmc1jWba_zyjR3hhCDSnxgghj8a27gpheh6bSJYBVVAyTaDhHsRCgl/exec";
 
     let clientName = localStorage.getItem('cangrejito_client_name');
     let currentStamps = parseInt(localStorage.getItem('cangrejito_stamps')) || 0;
@@ -265,7 +265,7 @@
         method: 'POST',
         mode: 'no-cors',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'text/plain;charset=utf-8',
         },
         body: JSON.stringify({
           clientName: clientName,
