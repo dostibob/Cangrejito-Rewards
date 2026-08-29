@@ -6,10 +6,10 @@
   <title>Cangrejito Rewards | Tarjeta de Lealtad</title>
   <style>
     :root {
-      --primary: #e88ca7;
-      --primary-dark: #d46b89;
-      --accent: #f7d6e0;
-      --bg: #faf4f6;
+      --primary: #e8b4b8;
+      --primary-dark: #d89fb4;
+      --accent: #fff0f2;
+      --bg: #faf6f0;
       --card-bg: #ffffff;
       --text: #4a4a4a;
     }
@@ -36,7 +36,7 @@
       max-width: 380px;
       background: var(--card-bg);
       border-radius: 24px;
-      box-shadow: 0 10px 25px rgba(232, 140, 167, 0.15);
+      box-shadow: 0 10px 25px rgba(232, 180, 184, 0.2);
       padding: 24px;
       text-align: center;
       border: 1px solid var(--accent);
@@ -44,7 +44,7 @@
 
     .brand-header h1 {
       font-size: 1.5rem;
-      color: var(--primary-dark);
+      color: #2c2c2c;
       letter-spacing: 1px;
     }
 
@@ -78,35 +78,62 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
       margin-bottom: 24px;
+      justify-items: center; /* Centra cada contenedor en su casilla */
+      align-items: center;
+      width: 100%;
     }
 
     .stamp {
+      width: 100%;          /* Mantiene la simetría exacta en las 3 columnas */
       aspect-ratio: 1;
       border: 2px dashed var(--primary);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      color: var(--primary);
       position: relative;
       transition: all 0.3s ease;
+      overflow: visible;     /* Permite posicionar el número sin recortes */
+      padding: 0;
+      background-color: #ffffff;
+    }
+
+    .stamp img {
+      width: 105%;
+      height: 105%;
+      object-fit: contain;
+      display: block;
+      margin: auto;
+      transition: transform 0.3s ease;
+      transform: translate(0px, -7px);
     }
 
     .stamp.active {
-      background-color: var(--primary);
-      border-style: solid;
-      color: white;
-      transform: scale(1.05);
+      background-color: var(--accent);
+      border: 2px solid var(--primary-dark);
     }
 
-    .stamp.active::after {
-      content: '💅';
-      font-size: 1.4rem;
+    .stamp.empty {
+      opacity: 0.75;
     }
 
-    .stamp.active span {
-      display: none;
+    .stamp-number {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: var(--primary-dark);
+      background: #ffffff;
+      border: 1px solid var(--primary);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      z-index: 2;
     }
 
     .notification {
@@ -223,8 +250,12 @@
   <script>
     const TOTAL_STAMPS = 6;
     const SECRET_KEY = "NAILS2026";
-    const MIN_STAMP_INTERVAL_MS = 2 * 60 * 60 * 1000; // Tiempo de bloqueo: 2 horas entre sellos
-    
+    const MIN_STAMP_INTERVAL_MS = 2 * 60 * 60 * 1000;
+
+    // --- RUTAS / URLS DE TUS DIBUJOS ---
+    const EMPTY_CRAB_URL = "Assets/Uncolor.png"; 
+    const ACTIVE_CRAB_URL = "Assets/color.png"; 
+
     // URL DE GOOGLE APPS SCRIPT
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwivCiZnPLXRTfmc1jWba_zyjR3hhCDSnxgghj8a27gpheh6bSJYBVVAyTaDhHsRCgl/exec";
 
@@ -280,7 +311,6 @@
       if (scannedSecret === SECRET_KEY) {
         const now = Date.now();
         
-        // Verificación de antifraude por tiempo
         if (now - lastStampTime < MIN_STAMP_INTERVAL_MS) {
           showAlert('⚠️ Ya se registró un sello recientemente. Intenta más tarde.', 'error');
         } else if (currentStamps < TOTAL_STAMPS) {
@@ -296,7 +326,6 @@
           showAlert('🎉 ¡Ya completaste tus sellos! Muestra tu tarjeta para recibir tu premio.', 'success');
         }
 
-        // Limpiar la URL para evitar recargas fraudulentas
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
@@ -336,11 +365,24 @@
       for (let i = 1; i <= TOTAL_STAMPS; i++) {
         const stamp = document.createElement('div');
         stamp.classList.add('stamp');
+        
+        const img = document.createElement('img');
+        const badgeNumber = document.createElement('span');
+        badgeNumber.classList.add('stamp-number');
+        badgeNumber.textContent = i;
+
         if (i <= currentStamps) {
           stamp.classList.add('active');
+          img.src = ACTIVE_CRAB_URL;
+          img.alt = "Cangrejito Coloreado";
         } else {
-          stamp.innerHTML = `<span>${i}</span>`;
+          stamp.classList.add('empty');
+          img.src = EMPTY_CRAB_URL;
+          img.alt = "Cangrejito Sin Color";
         }
+
+        stamp.appendChild(img);
+        stamp.appendChild(badgeNumber);
         container.appendChild(stamp);
       }
 
