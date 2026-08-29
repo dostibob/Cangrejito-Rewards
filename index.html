@@ -33,7 +33,7 @@
 
     .container {
       width: 100%;
-      max-width: 380px;
+      max-width: 420px;
       background: var(--card-bg);
       border-radius: 24px;
       box-shadow: 0 10px 25px rgba(232, 180, 184, 0.2);
@@ -71,20 +71,21 @@
       font-weight: 600;
       color: var(--primary-dark);
       margin-bottom: 24px;
+      transition: all 0.3s ease;
     }
 
     .stamps-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
       margin-bottom: 24px;
-      justify-items: center; /* Centra cada contenedor en su casilla */
+      justify-items: center;
       align-items: center;
       width: 100%;
     }
 
     .stamp {
-      width: 100%;          /* Mantiene la simetría exacta en las 3 columnas */
+      width: 100%;
       aspect-ratio: 1;
       border: 2px dashed var(--primary);
       border-radius: 50%;
@@ -93,9 +94,14 @@
       justify-content: center;
       position: relative;
       transition: all 0.3s ease;
-      overflow: visible;     /* Permite posicionar el número sin recortes */
+      overflow: visible;
       padding: 0;
       background-color: #ffffff;
+    }
+
+    .stamp.reward-stamp {
+      border: 2px solid var(--primary-dark);
+      background-color: #fff0f2;
     }
 
     .stamp img {
@@ -234,7 +240,7 @@
       <div id="alert-box" class="notification"></div>
 
       <div class="card-reward" id="reward-status">
-        ¡Llena tu tarjeta y obtén tu premio!
+        ¡Llena tus sellos y descubre tus sorpresas!
       </div>
 
       <div class="stamps-grid" id="stamps-container"></div>
@@ -248,13 +254,17 @@
   </div>
 
   <script>
-    const TOTAL_STAMPS = 6;
+    const TOTAL_STAMPS = 8;
     const SECRET_KEY = "NAILS2026";
     const MIN_STAMP_INTERVAL_MS = 2 * 60 * 60 * 1000;
 
-    // --- RUTAS / URLS DE TUS DIBUJOS ---
+    // --- RUTAS DE LAS IMÁGENES ---
     const EMPTY_CRAB_URL = "Assets/Uncolor.png"; 
     const ACTIVE_CRAB_URL = "Assets/color.png"; 
+
+    // IMÁGENES PARA PREMIOS (Se muestran SOLO cuando se activan los sellos 4 y 8)
+    const REWARD_10_URL = "Assets/Premio10.png"; // Imagen para el sello 4 desbloqueado
+    const REWARD_20_URL = "Assets/Premio20.png"; // Imagen para el sello 8 desbloqueado
 
     // URL DE GOOGLE APPS SCRIPT
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwivCiZnPLXRTfmc1jWba_zyjR3hhCDSnxgghj8a27gpheh6bSJYBVVAyTaDhHsRCgl/exec";
@@ -320,10 +330,17 @@
           localStorage.setItem('cangrejito_stamps', currentStamps);
           localStorage.setItem('cangrejito_last_stamp_time', lastStampTime);
 
-          showAlert('✨ ¡Sello añadido con éxito!', 'success');
+          if (currentStamps === 4) {
+            showAlert('🎉 ¡Felicidades! Desbloqueaste tu 10% de descuento.', 'success');
+          } else if (currentStamps === 8) {
+            showAlert('🎉 ¡Felicidades! Desbloqueaste tu 20% de descuento.', 'success');
+          } else {
+            showAlert('✨ ¡Sello añadido con éxito!', 'success');
+          }
+
           sendToGoogleSheets('Sello Añadido', currentStamps);
         } else {
-          showAlert('🎉 ¡Ya completaste tus sellos! Muestra tu tarjeta para recibir tu premio.', 'success');
+          showAlert('🎉 ¡Ya completaste todos tus sellos!', 'success');
         }
 
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -371,11 +388,24 @@
         badgeNumber.classList.add('stamp-number');
         badgeNumber.textContent = i;
 
+        // LÓGICA DE MOSTRAR IMAGEN SEGÚN DESBLOQUEO
         if (i <= currentStamps) {
           stamp.classList.add('active');
-          img.src = ACTIVE_CRAB_URL;
-          img.alt = "Cangrejito Coloreado";
+
+          if (i === 4) {
+            stamp.classList.add('reward-stamp');
+            img.src = REWARD_10_URL;
+            img.alt = "Premio 10% Descuento";
+          } else if (i === 8) {
+            stamp.classList.add('reward-stamp');
+            img.src = REWARD_20_URL;
+            img.alt = "Premio 20% Descuento";
+          } else {
+            img.src = ACTIVE_CRAB_URL;
+            img.alt = "Cangrejito Coloreado";
+          }
         } else {
+          // Si aún no se ha llegado a esa visita, se muestra vacía como todas las demás
           stamp.classList.add('empty');
           img.src = EMPTY_CRAB_URL;
           img.alt = "Cangrejito Sin Color";
@@ -386,14 +416,23 @@
         container.appendChild(stamp);
       }
 
-      if (currentStamps >= TOTAL_STAMPS) {
-        rewardStatus.textContent = '🎉 ¡Felicidades! Tienes tu premio listo para canjear.';
-        rewardStatus.style.background = '#d4edda';
-        rewardStatus.style.color = '#155724';
-      } else {
-        rewardStatus.textContent = `Te faltan ${TOTAL_STAMPS - currentStamps} visita(s) para tu premio.`;
+      // Actualizar banner de estado
+      if (currentStamps < 4) {
+        rewardStatus.textContent = `Te faltan ${4 - currentStamps} visita(s) para tu primera recompensa.`;
         rewardStatus.style.background = 'var(--accent)';
         rewardStatus.style.color = 'var(--primary-dark)';
+      } else if (currentStamps === 4) {
+        rewardStatus.textContent = '🎁 ¡Felicidades! Tienes un 10% de descuento disponible para canjear.';
+        rewardStatus.style.background = '#d4edda';
+        rewardStatus.style.color = '#155724';
+      } else if (currentStamps > 4 && currentStamps < 8) {
+        rewardStatus.textContent = `Te faltan ${8 - currentStamps} visita(s) para tu recompensa final.`;
+        rewardStatus.style.background = 'var(--accent)';
+        rewardStatus.style.color = 'var(--primary-dark)';
+      } else if (currentStamps >= 8) {
+        rewardStatus.textContent = '🎉 ¡Felicidades! Tienes tu 20% de descuento listo para canjear.';
+        rewardStatus.style.background = '#d4edda';
+        rewardStatus.style.color = '#155724';
       }
     }
 
@@ -412,7 +451,7 @@
       let confirmMsg = "¿Estás segura/o de reiniciar la tarjeta?";
       
       if (isCompleted) {
-        confirmMsg = "🎉 ¡Premio entregado! ¿Deseas reiniciar la tarjeta para iniciar un nuevo ciclo?";
+        confirmMsg = "🎉 ¡Premios entregados! ¿Deseas reiniciar la tarjeta para iniciar un nuevo ciclo?";
       }
 
       if (confirm(confirmMsg)) {
