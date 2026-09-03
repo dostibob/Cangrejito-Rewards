@@ -350,19 +350,23 @@
     function sendToGoogleSheets(actionType, stampsCount) {
       if (!GOOGLE_SCRIPT_URL) return;
 
+      const payload = {
+        clientName: clientName,
+        action: actionType,
+        stamps: stampsCount,
+        cycle: cardCycle
+      };
+
       fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8',
         },
-        body: JSON.stringify({
-          clientName: clientName,
-          action: actionType,
-          stamps: stampsCount,
-          cycle: cardCycle
-        })
-      }).catch(err => console.log('Error enviando datos:', err));
+        body: JSON.stringify(payload)
+      })
+      .then(() => console.log('Sincronizado con Google Sheets'))
+      .catch(err => console.log('Error enviando datos:', err));
     }
 
     function showAlert(message, type = 'success') {
@@ -405,7 +409,7 @@
             img.alt = "Cangrejito Coloreado";
           }
         } else {
-          // Si aún no se ha llegado a esa visita, se muestra vacía como todas las demás
+          // Si aún no se ha llegado a esa visita, se muestra vacía
           stamp.classList.add('empty');
           img.src = EMPTY_CRAB_URL;
           img.alt = "Cangrejito Sin Color";
