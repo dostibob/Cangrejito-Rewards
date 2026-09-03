@@ -245,7 +245,6 @@
 
       <div class="stamps-grid" id="stamps-container"></div>
 
-      <!-- BOTONES DE EDICIÓN Y REINICIO -->
       <div class="actions-footer">
         <button class="btn-link" onclick="editName()">Editar nombre</button>
         <button class="btn-link danger" onclick="resetCard()">Reiniciar tarjeta</button>
@@ -258,16 +257,14 @@
     const SECRET_KEY = "NAILS2026";
     const MIN_STAMP_INTERVAL_MS = 2 * 60 * 60 * 1000;
 
-    // --- RUTAS DE LAS IMÁGENES ---
+    // Rutas de las imágenes
     const EMPTY_CRAB_URL = "Assets/Uncolor.png"; 
     const ACTIVE_CRAB_URL = "Assets/color.png"; 
+    const REWARD_10_URL = "Assets/Premio10.png";
+    const REWARD_20_URL = "Assets/Premio20.png";
 
-    // IMÁGENES PARA PREMIOS (Se muestran SOLO cuando se activan los sellos 4 y 8)
-    const REWARD_10_URL = "Assets/Premio10.png"; // Imagen para el sello 4 desbloqueado
-    const REWARD_20_URL = "Assets/Premio20.png"; // Imagen para el sello 8 desbloqueado
-
-    // URL DE GOOGLE APPS SCRIPT
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwivCiZnPLXRTfmc1jWba_zyjR3hhCDSnxgghj8a27gpheh6bSJYBVVAyTaDhHsRCgl/exec";
+    // PEGA AQUÍ LA NUEVA URL QUE OBTUVISTE EN EL PASO 3
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1FNWSHeA7eAr5bfEljAlR3px9uPdo6Ve3Y4p_9ZaonkF9gV2Zl93OFy4xu91-ezQy/exec";
 
     let clientName = localStorage.getItem('cangrejito_client_name');
     let currentStamps = parseInt(localStorage.getItem('cangrejito_stamps')) || 0;
@@ -348,7 +345,7 @@
     }
 
     function sendToGoogleSheets(actionType, stampsCount) {
-      if (!GOOGLE_SCRIPT_URL) return;
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes("TU_NUEVO_ID_AQUI")) return;
 
       const payload = {
         clientName: clientName,
@@ -365,8 +362,8 @@
         },
         body: JSON.stringify(payload)
       })
-      .then(() => console.log('Sincronizado con Google Sheets'))
-      .catch(err => console.log('Error enviando datos:', err));
+      .then(() => console.log('Sincronizado correctamente con Google Sheets'))
+      .catch(err => console.error('Error al enviar datos:', err));
     }
 
     function showAlert(message, type = 'success') {
@@ -392,7 +389,6 @@
         badgeNumber.classList.add('stamp-number');
         badgeNumber.textContent = i;
 
-        // LÓGICA DE MOSTRAR IMAGEN SEGÚN DESBLOQUEO
         if (i <= currentStamps) {
           stamp.classList.add('active');
 
@@ -409,7 +405,6 @@
             img.alt = "Cangrejito Coloreado";
           }
         } else {
-          // Si aún no se ha llegado a esa visita, se muestra vacía
           stamp.classList.add('empty');
           img.src = EMPTY_CRAB_URL;
           img.alt = "Cangrejito Sin Color";
@@ -420,7 +415,6 @@
         container.appendChild(stamp);
       }
 
-      // Actualizar banner de estado
       if (currentStamps < 4) {
         rewardStatus.textContent = `Te faltan ${4 - currentStamps} visita(s) para tu primera recompensa.`;
         rewardStatus.style.background = 'var(--accent)';
